@@ -9,14 +9,44 @@ import UIKit
 class BlabberModel: ObservableObject {
   var username = ""
   var urlSession = URLSession.shared
-
+  private let manager = CLLocationManager()
+  private var delegate: ChatLocationDelegate?
   nonisolated init() {}
 
   /// Current live updates
   @Published var messages: [Message] = []
 
   /// Shares the current user's address in chat.
-  func shareLocation() async throws {}
+  func shareLocation() async throws {
+    let location: CLLocation = try await withCheckedThrowingContinuation { [weak self] continuation in
+      guard let self else { return }
+      delegate = ChatLocationDelegate(manager: manager, continuation: continuation)
+      if manager.authorizationStatus == .authorizedWhenInUse {
+        manager.startUpdatingLocation()
+      }
+    }
+    print(location.description)
+    manager.stopUpdatingLocation()
+    delegate = nil
+    
+    let address: String = try await withCheckedThrowingContinuation({ continuation in
+      AddressEncoder.addressFor(location: location) { address, error in
+        switch (address, error) {
+        case (nil, let error?):
+          continuation.resume(throwing: error)
+        case (let address?, nil):
+          continuation.resume(returning: address)
+        case (nil, nil):
+          continuation.resume(throwing: "Address encoding failed")
+        case let (address?, error?):
+          continuation.resume(returning: address)
+          print(error)
+        }
+      }
+    })
+    try await say("📍 \(address)")
+  }
+
   func observeAppStatus() async {
     Task {
       for await _ in NotificationCenter.default.notification(for: UIApplication.willResignActiveNotification) {

@@ -43,6 +43,8 @@ struct ChatView: View {
           Task {
             do {
               try await model.shareLocation()
+            } catch is CancellationError {
+              // Ignore CancellationError
             } catch {
               lastErrorMessage = error.localizedDescription
             }
