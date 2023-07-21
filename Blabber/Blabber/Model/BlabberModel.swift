@@ -11,6 +11,10 @@ class BlabberModel: ObservableObject {
   var urlSession = URLSession.shared
   private let manager = CLLocationManager()
   private var delegate: ChatLocationDelegate?
+  var sleep: (Int) async throws -> Void = {
+    try await Task.sleep(for: .seconds($0))
+  }
+
   nonisolated init() {}
 
   /// Current live updates
@@ -28,8 +32,8 @@ class BlabberModel: ObservableObject {
     print(location.description)
     manager.stopUpdatingLocation()
     delegate = nil
-    
-    let address: String = try await withCheckedThrowingContinuation({ continuation in
+
+    let address: String = try await withCheckedThrowingContinuation { continuation in
       AddressEncoder.addressFor(location: location) { address, error in
         switch (address, error) {
         case (nil, let error?):
@@ -43,7 +47,7 @@ class BlabberModel: ObservableObject {
           print(error)
         }
       }
-    })
+    }
     try await say("📍 \(address)")
   }
 
@@ -62,12 +66,13 @@ class BlabberModel: ObservableObject {
 
   /// Does a countdown and sends the message.
   func countdown(to message: String) async throws {
+    let sleep = self.sleep
     guard !message.isEmpty else { return }
     var countDown = 3
     let counter = AsyncStream<String> {
       guard countDown >= 0 else { return nil }
       do {
-        try await Task.sleep(for: .seconds(1))
+        try await sleep(1)
       } catch {
         return nil
       }
