@@ -2,7 +2,7 @@
 
 import Foundation
 
-class DiskStorage {
+@ImageDatabase class DiskStorage {
   private var folder: URL
 
   init() {
@@ -21,7 +21,7 @@ class DiskStorage {
     folder = databaseFolderURL
   }
 
-  static func fileName(for path: String) -> String {
+  nonisolated static func fileName(for path: String) -> String {
     return path.dropFirst()
       .components(separatedBy: .punctuationCharacters)
       .joined(separator: "_")
